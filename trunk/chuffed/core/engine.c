@@ -102,6 +102,9 @@ bool Engine::propagate() {
 
 	WakeUp:
 
+#ifdef LOGGING
+  logging::active_item = 0;
+#endif
 	if (!sat.consistent() && !sat.propagate()) return false;
 
 	for (int i = 0; i < v_queue.size(); i++) {
@@ -117,6 +120,9 @@ bool Engine::propagate() {
 		if (p_queue[i].size()) {
 			Propagator *p = p_queue[i].last(); p_queue[i].pop();
 			propagations++;
+#ifdef LOGGING
+      logging::active_item = p->prop_origin;
+#endif
 			bool ok = p->propagate();
 			p->clearPropState();
 			if (!ok) return false;
@@ -243,7 +249,17 @@ RESULT Engine::search() {
 				return RES_UNK;
 			}
 
-			if (decisionLevel() == 0) { return RES_GUN; }
+			if (decisionLevel() == 0) {
+#ifdef LOGGING
+        vec<int> ants;
+        ants.push(logging::infer((*sat.confl)[0], sat.confl));
+        for(int ii = 0; ii < sat.confl->size(); ii++) {
+          ants.push(logging::unit(~(*sat.confl)[ii]));
+        }
+        logging::empty(ants);
+#endif
+        return RES_GUN;
+      }
 
 			// Derive learnt clause and perform backjump
 			if (so.lazy) {

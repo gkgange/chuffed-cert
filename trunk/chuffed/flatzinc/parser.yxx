@@ -32,6 +32,7 @@
 
 #include <chuffed/flatzinc/flatzinc.h>
 #include <chuffed/flatzinc/parser.tab.h>
+#include <chuffed/core/logging.h>
 
 #ifdef HAVE_MMAP
 #include <stdio.h>
@@ -193,6 +194,9 @@ void initfg(ParserState* pp) {
     if (!pp->hadError) {
       try {
         pp->fg->newIntVar(static_cast<IntVarSpec*>(pp->intvars[i].second));
+#ifdef LOGGING
+        logging::bind_ivar(pp->fg->iv[pp->fg->intVarCount-1]->var_id, pp->intvars[i].first);
+#endif
       } catch (FlatZinc::Error& e) {
         yyerror(pp, e.toString().c_str());
       }
@@ -207,6 +211,9 @@ void initfg(ParserState* pp) {
       try {
         pp->fg->newBoolVar(
           static_cast<BoolVarSpec*>(pp->boolvars[i].second));
+#ifdef LOGGING
+        logging::bind_bvar(pp->fg->bv[pp->fg->boolVarCount-1].getLit(1), pp->boolvars[i].first);
+#endif
       } catch (FlatZinc::Error& e) {
         yyerror(pp, e.toString().c_str());
       }
@@ -1156,6 +1163,9 @@ vardecl_set_var_array_init :
 constraint_item :
       CONSTRAINT ID '(' flat_expr_list ')' annotations
       { 
+#ifdef LOGGING
+        logging::active_item++; 
+#endif
         ParserState *pp = static_cast<ParserState*>(parm);
 #if EXPOSE_INT_LITS
         pp->domainConstraints2.push_back(std::pair<ConExpr*, AST::Node*>(new ConExpr($2, $4), $6));
@@ -1174,6 +1184,9 @@ constraint_item :
       }
     | CONSTRAINT ID annotations
       {
+#ifdef LOGGING
+        logging::active_item++; 
+#endif
         ParserState *pp = static_cast<ParserState*>(parm);
         AST::Array* args = new AST::Array(2);
         args->a[0] = getVarRefArg(pp,$2);
@@ -1195,6 +1208,9 @@ constraint_item :
       }
     | CONSTRAINT ID '[' INT_LIT ']' annotations
         { 
+#ifdef LOGGING
+        logging::active_item++; 
+#endif
           ParserState *pp = static_cast<ParserState*>(parm);
           AST::Array* args = new AST::Array(2);
           args->a[0] = getArrayElement(pp,$2,$4);

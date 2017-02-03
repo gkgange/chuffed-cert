@@ -27,11 +27,16 @@ Assumptions:
 #include <chuffed/core/sat.h>
 //#include "core/prop-group.h"
 
+#include <chuffed/core/logging.h>
+
 enum ConLevel { CL_DEF, CL_VAL, CL_BND, CL_DOM };
 
 class Propagator {
 public:
 	int const prop_id;
+#ifdef LOGGING
+  unsigned int const prop_origin;
+#endif
 	int priority;
 
 	// Persistent state
@@ -40,7 +45,12 @@ public:
 	// Intermediate state
 	bool in_queue;
 
-	Propagator() : prop_id(engine.propagators.size()), priority(0),
+	Propagator() :
+    prop_id(engine.propagators.size())
+#ifdef LOGGING
+    , prop_origin(logging::active_item)
+#endif
+    , priority(0),
 		satisfied(false), in_queue(false) {
 		engine.propagators.push(this);
 	}
@@ -108,22 +118,60 @@ public:
 static inline Clause* Reason_new(int sz) {
   Clause *c = (Clause*) malloc(sizeof(Clause) + sz * sizeof(Lit));
 	c->clearFlags(); c->temp_expl = 1; c->sz = sz;
+#ifdef LOGGING
+  c->origin = logging::active_item;
+  c->ident = 0;
+#endif
 	sat.rtrail.last().push(c);
   return c;
 }
 
 static inline Clause* Reason_new(vec<Lit>& ps) {
 	Clause *c = Clause_new(ps);
+#ifdef LOGGING
+  c->origin = logging::active_item;
+#endif
 	c->temp_expl = 1;
 	sat.rtrail.last().push(c);
 	return c;
 }
 
+#ifdef LOGGING
+static inline Reason mk_reason(Lit p) {
+  Clause* c = Reason_new(2);
+  (*c)[1] = p;
+  return c;
+}
+
+static inline Reason mk_reason(Lit p, Lit q) {
+  Clause* c = Reason_new(3);
+  (*c)[1] = p; (*c)[2] = p;
+  return c;
+}
+
+static inline Reason mk_reason(Reason r) {
+  return r;
+}
+
+#else
+static inline Reason mk_reason(Lit p) {
+  return Reason(p);
+}
+
+static inline Reason mk_reason(Lit p, Lit q) {
+  return Reason(p, q);
+}
+
+static inline Reason mk_reason(Reason r) {
+  return r;
+}
+#endif
 
 #define TL_SET(var, op, val) do {                                     \
 	if (var->op ## NotR(val) && !var->op(val)) TL_FAIL(); } while (0)
 
 
+#ifndef LOGGING
 #define setDom(var, op, val, ...) do {           \
 	int64_t m_v = (val);                           \
 	if (var.op ## NotR(m_v)) {                     \
@@ -132,6 +180,16 @@ static inline Clause* Reason_new(vec<Lit>& ps) {
 		if (!var.op(m_v, m_r)) return false;         \
 	}                                              \
 } while (0)
+#else
+#define setDom(var, op, val, ...) do {           \
+	int64_t m_v = (val);                           \
+	if (var.op ## NotR(m_v)) {                     \
+		Reason m_r = NULL;                           \
+		if (so.lazy) m_r = mk_reason(__VA_ARGS__); \
+		if (!var.op(m_v, m_r)) return false;         \
+	}                                              \
+} while (0)
+#endif
 
 #define setDom2(var, op, val, index) do {                                         \
 	int64_t v = (val);                                                              \

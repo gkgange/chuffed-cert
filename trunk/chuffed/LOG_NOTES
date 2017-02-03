@@ -1,0 +1,9 @@
+# Modified version of chuffed with proof logging
+
+To support logging, there are a few limitations/restrictions.
+
+- Special handling for binary & ternary clauses is disabled, so there
+  may be a slight performance hit.
+
+- Decompositions which (internally) introduce variables will abort,
+  (since the model has no 'name' for the corresponding variable.)

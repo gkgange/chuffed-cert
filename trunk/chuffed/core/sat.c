@@ -13,7 +13,11 @@
 SAT sat;
 
 cassert(sizeof(Lit) == 4);
+#ifndef LOGGING
 cassert(sizeof(Clause) == 4);
+#else
+cassert(sizeof(Clause) == 12);
+#endif
 cassert(sizeof(WatchElem) == 8);
 cassert(sizeof(Reason) == 8);
 
@@ -86,6 +90,7 @@ SAT::SAT() :
 	short_expl = (Clause*) malloc(sizeof(Clause) + 3 * sizeof(Lit));
 	short_confl = (Clause*) malloc(sizeof(Clause) + 2 * sizeof(Lit));
 	short_expl->clearFlags();
+  short_expl->temp_expl = 1;
 	short_confl->clearFlags();
 	short_confl->sz = 2;
 }
@@ -175,9 +180,14 @@ void SAT::addClause(Lit p, Lit q) {
 		enqueue(p);
 		return;
 	}
+#ifndef LOGGING
 	bin_clauses++;
 	watches[toInt(~p)].push(q);
 	watches[toInt(~q)].push(p);
+#else
+  vec<Lit> ps; ps.push(p); ps.push(q);
+  addClause(*Clause_new(ps), false);
+#endif
 }
 
 void SAT::addClause(vec<Lit>& ps, bool one_watch) {
@@ -213,12 +223,14 @@ void SAT::addClause(Clause& c, bool one_watch) {
 	// Mark lazy lits which are used
 	if (c.learnt) for (int i = 0; i < c.size(); i++) incVarUse(var(c[i]));
 
+#ifndef LOGGING
 	if (c.size() == 2) {
 		if (!one_watch) watches[toInt(~c[0])].push(c[1]);
 		watches[toInt(~c[1])].push(c[0]);
 		if (!c.learnt) free(&c);
 		return;
 	}
+#endif
 	if (!one_watch) watches[toInt(~c[0])].push(&c);
 	watches[toInt(~c[1])].push(&c);
 	if (c.learnt) learnts_literals += c.size();
@@ -239,19 +251,25 @@ void SAT::removeClause(Clause& c) {
 	free(&c);
 }
 
-
 void SAT::topLevelCleanUp() {
   assert(decisionLevel() == 0);
 
+#ifndef LOGGING
 	for (int i = rtrail[0].size(); i-- > 0; ) free(rtrail[0][i]);
 	rtrail[0].clear();
+#endif
+
+	for (int i = 0; i < trail[0].size(); i++) {
+#ifndef LOGGING
+        seen[var(trail[0][i])] = true;
+#else
+        logging::unit(trail[0][i]);
+#endif
+        trailpos[var(trail[0][i])] = -1;
+  }
 
 	if (so.sat_simplify && propagations >= next_simp_db) simplifyDB();
 
-	for (int i = 0; i < trail[0].size(); i++) {
-        seen[var(trail[0][i])] = true;
-        trailpos[var(trail[0][i])] = -1;
-    }
 	trail[0].clear();
 	qhead[0] = 0;
 
@@ -268,14 +286,36 @@ void SAT::simplifyDB() {
 }
 
 bool SAT::simplify(Clause& c) {
+#ifdef LOGGING
+  assert(c.ident);
+#endif
 	if (value(c[0]) == l_True) return true;
 	if (value(c[1]) == l_True) return true;
 	int i, j;
 	for (i = j = 2; i < c.size(); i++) {
+#ifndef LOGGING
 		if (value(c[i]) == l_True) return true;
 		if (value(c[i]) == l_Undef) c[j++] = c[i];
+#else
+    if (value(c[i]) == l_True) {
+      logging::antecedents.clear();
+      return true;
+    }
+    if (value(c[i]) == l_Undef)
+      c[j++] = c[i];
+    else
+      logging::antecedents.push(logging::unit(c[i]));
+#endif
 	}
 	c.sz = j;
+#ifdef LOGGING
+  if(logging::antecedents.size() > 0) {
+    logging::antecedents.push(c.ident);
+    c.ident = 0;
+    logging::resolve(&c);
+    assert(logging::antecedents.size() == 0);
+  }
+#endif
 	return false;
 }
 
@@ -335,6 +375,9 @@ void SAT::btToLevel(int level) {
 	for (int l = trail.size(); l-- > level+1; ) {
 		untrailToPos(trail[l], 0);
 		for (int i = rtrail[l].size(); i--; ) {
+#ifdef LOGGING
+      logging::del(rtrail[l][i]);
+#endif
 			free(rtrail[l][i]);
 		}
 	}

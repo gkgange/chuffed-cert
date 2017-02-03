@@ -1,6 +1,7 @@
 CC = g++
 #CC = ~/gcc-4.3.0/bin/g++
-CPPFLAGS = -g -O3 -I . -I../
+#CPPFLAGS = -g -O3 -I . -I../
+CPPFLAGS = -g -O0 -I . -I../
 CPPFLAGS += -Wall -Wno-non-virtual-dtor -Wno-unused-function -Wno-deprecated
 #CPPFLAGS += -DNDEBUG
 #CPPFLAGS += -pg
@@ -23,6 +24,8 @@ ifeq ($(shell uname -s),Darwin)
 CC = clang++
 CPPFLAGS += -stdlib=libstdc++
 endif
+
+CPPFLAGS += -DLOGGING
 
 ifeq ($(PARALLEL),true)
 #CC = /usr/lib64/lam/bin/mpic++

@@ -8,6 +8,9 @@
 #include <chuffed/parallel/parallel.h>
 #include <chuffed/ldsb/ldsb.h>
 
+#include <chuffed/core/logging.h>
+#include <chuffed/support/misc.h>
+
 #define PRINT_ANALYSIS 0
 
 
@@ -69,6 +72,9 @@ inline void SAT::claDecayActivity() {
 Clause* SAT::_getExpl(Lit p) {
 //	fprintf(stderr, "L%d - %d\n", decisionLevel(), trailpos[var(p)]);
 	Reason& r = reason[var(p)];
+#ifdef LOGGING
+  logging::active_item = engine.propagators[r.d.d2]->prop_origin;
+#endif
 	return engine.propagators[r.d.d2]->explain(p, r.d.d1);
 }
 
@@ -77,10 +83,23 @@ Clause* SAT::getConfl(Reason& r, Lit p) {
 		case 0:
 			return r.pt;
 		case 1:
+#ifdef LOGGING
+      {
+      Clause* c = engine.propagators[r.d.d2]->explain(p, r.d.d1);
+      c->origin = engine.propagators[r.d.d2]->prop_origin;
+			return c;
+      }
+#else
 			return engine.propagators[r.d.d2]->explain(p, r.d.d1);
+#endif
 		default:
 			Clause& c = *short_expl;
+#ifdef LOGGING
+      assert(r.d.type = 2);
+      c.sz = r.d.type; c[1] = toLit(r.d.d1); c.origin = r.d.d2;
+#else
 			c.sz = r.d.type; c[1] = toLit(r.d.d1); c[2] = toLit(r.d.d2);
+#endif
 			return short_expl;
 	}
 }
@@ -88,6 +107,9 @@ Clause* SAT::getConfl(Reason& r, Lit p) {
 void SAT::analyze() {
 	avg_depth += 0.01*(decisionLevel()-avg_depth);
 
+#ifdef LOGGING
+  assert(logging::antecedents.size() == 0);
+#endif
 	checkConflict();
 	varDecayActivity();
 	claDecayActivity();
@@ -107,6 +129,9 @@ void SAT::analyze() {
 
 	Clause *c = Clause_new(out_learnt, true);
 	c->activity() = cla_inc;
+#ifdef LOGGING
+  logging::resolve(c);
+#endif
 
 	learntLenBumpActivity(c->size());
 
@@ -115,9 +140,17 @@ void SAT::analyze() {
 	}
 
 	if (so.learn && c->size() >= 2) addClause(*c, so.one_watch);
+#ifdef LOGGING
+  if(!so.learn) rtrail.last().push(c);
+#else
 	if (!so.learn || c->size() <= 2) rtrail.last().push(c);
+#endif
 
+#ifndef LOGGING
 	enqueue(out_learnt[0], c->size() == 2 ? Reason(out_learnt[1]) : c);
+#else
+  enqueue(out_learnt[0], c);
+#endif
 
 	if (PRINT_ANALYSIS) printClause(*c);
 
@@ -134,7 +167,6 @@ void SAT::analyze() {
 
 	if (learnts.size() >= so.nof_learnts ||
 		learnts_literals >= so.learnts_mlimit/4) reduceDB();
-
 }
 
 
@@ -145,6 +177,10 @@ void SAT::getLearntClause() {
 	vec<Lit>& ctrail = trail[clevel];
 	Clause* expl = confl;
 	Reason last_reason = NULL;
+#ifdef LOGGING
+  expl->origin = logging::active_item;
+  logging::antecedents.push(logging::infer((*expl)[0], expl)); 
+#endif
 
 	index = ctrail.size();
 	out_learnt.clear();
@@ -190,11 +226,12 @@ FindNextExpl:
 		if (last_reason == reason[var(p)]) goto FindNextExpl;
 		last_reason = reason[var(p)];
 		expl = getExpl(p);
-
+#ifdef LOGGING
+    logging::antecedents.push(logging::infer(p, expl));
+#endif
 	}
 
 	out_learnt[0] = ~p;
-
 }
 
 int SAT::findConflictLevel() {
@@ -238,6 +275,9 @@ void SAT::explainUnlearnable() {
 		if (flags[var(p)].learnable) continue;
 		assert(!reason[var(p)].isLazy());
 		Clause& c = *getExpl(~p);
+#ifdef LOGGING
+    logging::antecedents.push(logging::infer(~p, &c));
+#endif
 		removed.push(p);
 		out_learnt[i] = out_learnt.last(); out_learnt.pop(); i--;
 		for (int j = 1; j < c.size(); j++) {

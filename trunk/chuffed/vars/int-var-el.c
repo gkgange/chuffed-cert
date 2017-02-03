@@ -2,6 +2,8 @@
 #include <chuffed/vars/int-var.h>
 #include <chuffed/core/sat.h>
 
+#include <chuffed/core/propagator.h>
+
 IntVarEL::IntVarEL(const IntVar& other) :
 		IntVar(other)
 	, lit_min(INT_MIN)
@@ -79,7 +81,7 @@ Lit IntVarEL::getLit(int64_t v, int t) {
 inline void IntVarEL::channelMin(int v) {
 	// Set [x >= v-1] to [x >= min+1] using [x >= i] \/ ![x >= v]
 	// Set [x != v-1] to [x != min] using [x != i] \/ ![x >= v]
-	Reason r(~getGELit(v));
+	Reason r(mk_reason(~getGELit(v)));
 	for (int i = v-1; i > min; i--) {
 		sat.cEnqueue(getGELit(i), r);
 		if (vals[i]) sat.cEnqueue(getNELit(i), r);
@@ -92,7 +94,7 @@ inline void IntVarEL::channelMin(int v) {
 inline void IntVarEL::channelMax(int v) {
 	// Set [x <= v+1] to [x <= max-1] to using [x <= i] \/ ![x <= v]
 	// Set [x != v+1] to [x != max] to using ![x = i] \/ ![x <= v]
-	Reason r(~getLELit(v));
+	Reason r(mk_reason(~getLELit(v)));
 	for (int i = v+1; i < max; i++) {
 		sat.cEnqueue(getLELit(i), r);
 		if (vals[i]) sat.cEnqueue(getNELit(i), r);
@@ -103,7 +105,7 @@ inline void IntVarEL::channelMax(int v) {
 
 // Use when you've just set [x = v]
 inline void IntVarEL::channelFix(int v) {
-	Reason r(getNELit(v));
+	Reason r(mk_reason(getNELit(v)));
 	if (min < v) {
 		// Set [x >= v] using [x >= v] \/ ![x = v]
 		sat.cEnqueue(getGELit(v), r);
@@ -120,7 +122,7 @@ inline void IntVarEL::channelFix(int v) {
 inline void IntVarEL::updateMin(int v, int i) {
 	for (; v < i; ++v) {
 		// Set [x >= v+1] using [x >= v+1] \/ [x <= v-1] \/ [x = v]
-		Reason r(getLELit(v-1), getEQLit(v));
+		Reason r(mk_reason(getLELit(v-1), getEQLit(v)));
 		sat.cEnqueue(getGELit(v+1), r);
 	}
 	min = v; changes |= EVENT_C | EVENT_L;
@@ -129,7 +131,7 @@ inline void IntVarEL::updateMin(int v, int i) {
 inline void IntVarEL::updateMax(int v, int i) {
 	for (; v > i; --v) {
 		// Set [x <= v-1] using [x <= v-1] \/ [x >= v+1] \/ [x = v]
-		Reason r(getGELit(v+1), getEQLit(v));
+		Reason r(mk_reason(getGELit(v+1), getEQLit(v)));
 		sat.cEnqueue(getLELit(v-1), r);
 	}
 	max = v; changes |= EVENT_C | EVENT_U;
@@ -139,7 +141,7 @@ inline void IntVarEL::updateMin() {
 	int v = min;
 	while (!vals[v]) {
 		// Set [x >= v+1] using [x >= v+1] \/ [x <= v-1] \/ [x = v]
-		Reason r(getLELit(v-1), getEQLit(v));
+		Reason r(mk_reason(getLELit(v-1), getEQLit(v)));
 		sat.cEnqueue(getGELit(v+1), r);
 		v++;
 	}
@@ -150,7 +152,7 @@ inline void IntVarEL::updateMax() {
 	int v = max;
 	while (!vals[v]) {
 		// Set [x <= v-1] using [x <= v-1] \/ [x >= v+1] \/ [x = v]
-		Reason r(getGELit(v+1), getEQLit(v));
+		Reason r(mk_reason(getGELit(v+1), getEQLit(v)));
 		sat.cEnqueue(getLELit(v-1), r);
 		v--;
 	}
@@ -162,7 +164,7 @@ inline void IntVarEL::updateFixed() {
 	if (isFixed()) {
 		int v = min;
 		// Set [x = v] using [x = v] \/ [x <= v-1] \/ [x >= v+1]
-		Reason r(getLELit(v-1), getGELit(v+1));
+		Reason r(mk_reason(getLELit(v-1), getGELit(v+1)));
 		sat.cEnqueue(getEQLit(v), r);
 		changes |= EVENT_F;
 	}

@@ -1,6 +1,12 @@
 #ifndef sat_types_h
 #define sat_types_h
+#include <cstdlib>
 
+class Lit;
+class Clause;
+
+#include <chuffed/support/misc.h>
+#include <chuffed/core/logging.h>
 //=================================================================================================
 // Variables, literals, lifted booleans, clauses:
 
@@ -79,8 +85,17 @@ class Clause {
 public:
 	unsigned int learnt    : 1;             // is it a learnt clause
 	unsigned int temp_expl : 1;             // is it a temporary explanation clause
+#ifdef LOGGING
+  unsigned int logged    : 1;
+	unsigned int padding   : 5;
+#else
 	unsigned int padding   : 6;             // save some bits for other bitflags
+#endif
 	unsigned int sz        : 24;            // the size of the clause
+#ifdef LOGGING
+  unsigned int ident;
+  unsigned int origin;
+#endif
   Lit data[0];                            // the literals of the clause
 	float data2[0];
 
@@ -91,6 +106,10 @@ public:
 		clearFlags();
 		sz = ps.size();
 		this->learnt = learnt;
+#ifdef LOGGING
+    this->ident = 0;
+    this->origin = logging::active_item;
+#endif
 		for (int i = 0; i < ps.size(); i++) data[i] = ps[i];
 	}
 
@@ -162,7 +181,11 @@ public:
 	};
 	WatchElem() : a(0) {}
 	WatchElem(Clause *c) : pt(c) { if (sizeof(Clause *) == 4) d.d2 = 0; }
+#ifndef LOGGING
 	WatchElem(Lit p) { d.type = 1; d.d2 = toInt(p); }
+#else
+  WatchElem(Lit p, unsigned int ident) { d.type = 1; d.d1 = ident; d.d2 = toInt(p); }
+#endif
 	WatchElem(int prop_id, int pos) { d.type = 2, d.d1 = pos, d.d2 = prop_id; }
 	bool operator != (WatchElem o) const { return a != o.a; }
 };
@@ -185,8 +208,18 @@ public:
 	Reason() : a(0) {}
 	Reason(Clause *c) : pt(c) { if (sizeof(Clause *) == 4) d.d2 = 0; }
 	Reason(int prop_id, int inf_id) { d.type = 1; d.d1 = inf_id; d.d2 = prop_id; }
-	Reason(Lit p) { d.type = 2; d.d1 = toInt(p); }
-	Reason(Lit p, Lit q) { d.type = 3; d.d1 = toInt(p); d.d2 = toInt(q); }
+	Reason(Lit p) {
+#ifdef LOGGING
+    d.d2 = logging::active_item;
+#endif
+    d.type = 2; d.d1 = toInt(p);
+  }
+	Reason(Lit p, Lit q) {
+#ifdef LOGGING
+    NEVER;
+#endif
+    d.type = 3; d.d1 = toInt(p); d.d2 = toInt(q);
+  }
 	bool operator == (Reason o) const { return a == o.a; }
 	bool isLazy() const { return d.type == 1; }
 };

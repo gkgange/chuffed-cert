@@ -37,6 +37,7 @@
 // Controls whether expressions like bool_sum_eq([x[i] = j | i in 1..n], 1)
 // access the underlying literals x[i] = j or new ones via int_eq_reif(...)
 // NOTE:  Implemention isn't 100% ideal at this stage so kept it conditional
+// WARNING: Must be 0 is LOGGING is enabled.
 #define EXPOSE_INT_LITS 0
 
 namespace FlatZinc {

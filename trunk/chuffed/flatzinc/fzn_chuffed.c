@@ -77,6 +77,9 @@ int main(int argc, char** argv) {
 	}
 */
 
+#ifdef LOGGING
+  logging::init();
+#endif
 	if (argc == 1) {
 		FlatZinc::solve(std::cin, std::cerr);
 	} else {
@@ -85,5 +88,8 @@ int main(int argc, char** argv) {
 
 	engine.solve(FlatZinc::s);
 
+#ifdef LOGGING
+  logging::finalize();
+#endif
 	return 0;
 }

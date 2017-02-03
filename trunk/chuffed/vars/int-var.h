@@ -9,8 +9,12 @@
 #include <chuffed/vars/vars.h>
 #include <chuffed/vars/bool-view.h>
 
+#ifndef INT64_MAX
 #define INT64_MAX 9223372036854775807LL
+#endif
+#ifndef INT64_MIN
 #define INT64_MIN (-INT64_MAX-1)
+#endif
 
 // Controls whether active domain values are stored in a trailed linked list,
 // to allow fast enumeration of domain values.  Also whether a count is kept.

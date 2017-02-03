@@ -206,6 +206,9 @@ inline Clause* SAT::getExpl(Lit p) {
 			return _getExpl(p);
 		default:
 			Clause& c = *short_expl;
+#ifdef LOGGING
+      assert(r.d.type = 2);
+#endif
 			c.sz = r.d.type; c[1] = toLit(r.d.d1); c[2] = toLit(r.d.d2);
 			return short_expl;
 	}

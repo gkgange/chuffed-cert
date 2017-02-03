@@ -1,5 +1,6 @@
 #include <chuffed/vars/int-var.h>
 #include <chuffed/core/sat.h>
+#include <chuffed/core/propagator.h>
 
 // val -> (val-1)/2
 
@@ -96,7 +97,7 @@ Lit IntVarLL::getLit(int64_t v, int t) {
 
 // Use when you've just set [x >= v]
 inline void IntVarLL::channelMin(int v, Lit p) {
-	Reason r(~p);
+	Reason r(mk_reason(~p));
 	int ni;
 	for (ni = ld[li].next; ld[ni].val < v-1; ni = ld[ni].next) {
 		sat.cEnqueue(Lit(ld[ni].var, 1), r);
@@ -107,7 +108,7 @@ inline void IntVarLL::channelMin(int v, Lit p) {
 
 // Use when you've just set [x <= v]
 inline void IntVarLL::channelMax(int v, Lit p) {
-	Reason r(~p);
+	Reason r(mk_reason(~p));
 	int ni;
 	for (ni = ld[hi].prev; ld[ni].val > v; ni = ld[ni].prev) {
 		sat.cEnqueue(Lit(ld[ni].var, 0), r);
@@ -118,7 +119,7 @@ inline void IntVarLL::channelMax(int v, Lit p) {
 
 inline void IntVarLL::updateFixed() {
 	if (isFixed()) {
-		Reason r(getMinLit(), getMaxLit());
+		Reason r(mk_reason(getMinLit(), getMaxLit()));
 		sat.cEnqueue(valLit, r);
 		changes |= EVENT_F;
 	}
