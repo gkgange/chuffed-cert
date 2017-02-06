@@ -1,0 +1,175 @@
+#include <cstdlib>
+#include <cstdio>
+#include <vector>
+#include <chuffed/support/vec.h>
+#include <chuffed/core/sat-types.h>
+#include <chuffed/core/logging.h>
+#include <chuffed/core/sat.h>
+
+namespace logging {
+unsigned int active_item = 0;
+unsigned int infer_count = 0;
+
+static unsigned int active_hint;
+vec<int> antecedents;
+vec<int> temporaries;
+
+static std::vector<std::string> ivar_idents = std::vector<std::string>();
+
+FILE* log_file = stderr;
+FILE* lit_file = stderr;
+
+void init(void) {
+  log_file = fopen("log.dres", "w");
+  lit_file = fopen("log.lit","w");
+}
+
+void finalize(void) {
+  // Output literal semantics   
+  for(int vi = 0; vi < sat.assigns.size(); vi++) {
+    ChannelInfo& ci = sat.c_info[vi];
+	  if (ci.cons_type == 1) {
+      assert(ci.cons_id < ivar_idents.size());
+      fprintf(lit_file, "%d [%s %s %d]\n", vi, ivar_idents[ci.cons_id].c_str(), ci.val_type ? ">=" : "=", ci.val);
+      // fprintf(lit_file, "%d [v%d %s %d]\n", vi, vi+1, ci.val_type ? ">=" : "=", ci.val);
+    }
+  }
+
+  fclose(log_file);
+  fclose(lit_file);
+}
+
+inline void set_hint(unsigned int hint) {
+  if(hint != active_hint) {
+    if(hint) {
+      fprintf(log_file, "c %d\n", hint);
+    } else {
+      fprintf(log_file, "c -\n");
+    }
+    active_hint = hint;
+  }
+}
+
+inline void log_lits(Clause* cl) {
+  for(int ii = 0; ii < cl->size(); ii++) {
+    Lit l((*cl)[ii]);
+    fprintf(log_file, "%s%d ", sign(l) ? "" : "-", var(l)+1);
+  }
+}
+
+int intro(Clause* cl) {
+  assert(!cl->temp_expl);
+  if(cl->ident) {
+    return cl->ident;
+  }
+  cl->ident = ++infer_count;
+
+  set_hint(cl->origin);
+
+  fprintf(log_file, "%d ", cl->ident);
+  log_lits(cl);
+  fprintf(log_file, "0 0\n");
+  return cl->ident;
+}
+
+int infer(Lit l, Clause* cl) {
+  if(cl->temp_expl) {
+    (*cl)[0] = l;
+    cl->ident = ++infer_count;
+    temporaries.push(cl->ident);
+  } else if(cl->ident) {
+    return cl->ident;
+  } else {
+    cl->ident = ++infer_count;
+  }
+
+  set_hint(cl->origin);
+
+  fprintf(log_file, "%d ", cl->ident);
+  log_lits(cl);
+  fprintf(log_file, "0 0\n");
+  return cl->ident;
+}
+
+int log_resolve(Clause* cl, vec<int>& antecedents) {
+  cl->origin = 0;
+  cl->ident = ++infer_count;
+
+  fprintf(log_file, "%d ", cl->ident);
+  log_lits(cl);
+  fprintf(log_file, "0 ");
+  for(int ii = 0; ii < antecedents.size(); ii++) {
+    fprintf(log_file, "%d ", antecedents[ii]);
+  }
+  fprintf(log_file, "0\n");
+  antecedents.clear();
+
+  return cl->ident;
+}
+
+int resolve(Clause* cl) {
+  int ident = log_resolve(cl, antecedents);
+
+  for(int ii = 0; ii < temporaries.size(); ii++) {
+    fprintf(log_file, "d %d\n", temporaries[ii]);
+  }
+  temporaries.clear();
+
+  assert(antecedents.size() == 0);
+
+  return ident;
+}
+
+void empty(vec<int>& antecedents) {
+  fprintf(log_file, "%d 0 ", ++infer_count);
+  for(int ii = 0; ii < antecedents.size(); ii++) {
+    fprintf(log_file, "%d ", antecedents[ii]);
+  }
+  fprintf(log_file, "0\n");
+}
+
+void del(Clause* cl) {
+  if(!cl->ident || cl->temp_expl)
+    return;
+
+  fprintf(log_file, "d %d\n", cl->ident);  
+}
+
+inline Clause* unit_clause(Lit l) {
+  vec<Lit> ps; ps.push(l);
+  Clause* r = Clause_new(ps);
+  r->origin = 0;
+  return r;
+}
+
+int unit(Lit l) {
+  Clause* r = sat.getExpl(l);
+  if(!r) {
+    r = unit_clause(l);
+    sat.reason[var(l)] = r;
+    return infer(l, r);
+  } else if(r->size() > 1) {
+    vec<int> ants;  
+    ants.push(infer(l, r));
+    for(int ii = 1; ii < r->size(); ii++) {
+      ants.push(unit(~(*r)[ii]));
+    }
+    r = unit_clause(l);
+    sat.reason[var(l)] = r;
+    return log_resolve(r, ants);
+  }
+  return r->ident;
+};
+
+void bind_ivar(int ivar_id, const std::string& sym) {
+  while(ivar_idents.size() <= ivar_id)
+    ivar_idents.push_back("UNDEF");
+  ivar_idents[ivar_id] = sym;
+}
+
+void bind_bvar(Lit l, const std::string& sym) {
+  // Don't actually save; just write
+  fprintf(lit_file, "%d [%s %s 1]\n", var(l), sym.c_str(), sign(l) ? ">=" : "<");
+}
+
+};
