@@ -37,7 +37,22 @@ void array_int_element(IntVar* _x, vec<int>& a, IntVar* _y, int offset) {
 		z.push(a[i]);
 	}
 
+#if 0
 	_y->specialiseToSL(z);
+#else
+	_y->specialiseToEL();
+  std::sort((int*) z, (int*) z + z.size());
+  if(_y->setMinNotR(z[0]))
+    _y->setMin(z[0]);
+  if(_y->setMaxNotR(z.last()))
+    _y->setMax(z.last());
+  for(int vi = 1; vi < z.size(); vi++) {
+    for(int k = z[vi-1]+1; k < z[vi]-1; k++)
+      if(_y->remValNotR(k))
+        _y->remVal(k);
+  }
+#endif
+
 	_x->specialiseToEL();
 
 	IntView<0> y(_y);

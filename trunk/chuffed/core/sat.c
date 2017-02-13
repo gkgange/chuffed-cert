@@ -304,7 +304,7 @@ bool SAT::simplify(Clause& c) {
     if (value(c[i]) == l_Undef)
       c[j++] = c[i];
     else
-      logging::antecedents.push(logging::unit(c[i]));
+      logging::antecedents.push(logging::unit(~c[i]));
 #endif
 	}
 	c.sz = j;

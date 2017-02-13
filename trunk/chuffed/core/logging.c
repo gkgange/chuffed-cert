@@ -6,6 +6,8 @@
 #include <chuffed/core/logging.h>
 #include <chuffed/core/sat.h>
 
+#define CHECK_LOG
+
 namespace logging {
 unsigned int active_item = 0;
 unsigned int infer_count = 0;
@@ -73,6 +75,11 @@ int intro(Clause* cl) {
 }
 
 int infer(Lit l, Clause* cl) {
+#ifdef CHECK_LOG
+  for(int ii = 1; ii < cl->size(); ii++) {
+    assert(sat.value((*cl)[ii]) == l_False);
+  }
+#endif
   if(cl->temp_expl) {
     (*cl)[0] = l;
     cl->ident = ++infer_count;
@@ -143,6 +150,10 @@ inline Clause* unit_clause(Lit l) {
 }
 
 int unit(Lit l) {
+#ifdef CHECK_LOG
+  assert(sat.value(l) == l_True);
+#endif
+
   Clause* r = sat.getExpl(l);
   if(!r) {
     r = unit_clause(l);

@@ -132,7 +132,7 @@ public:
 
    }
 
-   bool insert(int value)
+   bool insert(unsigned int value)
    {
        // Assumes not FFSET.
       assert( !elem(value) );
