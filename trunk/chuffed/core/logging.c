@@ -28,11 +28,21 @@ void init(void) {
 
 void finalize(void) {
   // Output literal semantics   
-  for(int vi = 0; vi < sat.assigns.size(); vi++) {
+  fprintf(lit_file, "1 [lit_True >= 1]\n");
+  fprintf(lit_file, "2 [lit_True < 1]\n");
+  for(int vi = 2; vi < sat.assigns.size(); vi++) {
     ChannelInfo& ci = sat.c_info[vi];
 	  if (ci.cons_type == 1) {
-      assert(ci.cons_id < ivar_idents.size());
-      fprintf(lit_file, "%d [%s %s %d]\n", vi, ivar_idents[ci.cons_id].c_str(), ci.val_type ? ">=" : "=", ci.val);
+      if(ci.cons_id >= ivar_idents.size()) {
+        fprintf(stderr, "WARNING: variable %d has no name.\n", ci.cons_id);
+        if(toLbool(sat.assigns[vi]) == l_True) {
+          fprintf(lit_file, "%d [lit_True >= 1]\n", vi+1); 
+        } else if(toLbool(sat.assigns[vi]) == l_False) {
+            fprintf(lit_file, "%d [lit_True < 1]\n", vi+1);
+        }
+        continue;
+      }
+      fprintf(lit_file, "%d [%s %s %d]\n", vi+1, ivar_idents[ci.cons_id].c_str(), ci.val_type ? ">=" : "=", ci.val);
       // fprintf(lit_file, "%d [v%d %s %d]\n", vi, vi+1, ci.val_type ? ">=" : "=", ci.val);
     }
   }
@@ -55,6 +65,8 @@ inline void set_hint(unsigned int hint) {
 inline void log_lits(Clause* cl) {
   for(int ii = 0; ii < cl->size(); ii++) {
     Lit l((*cl)[ii]);
+//    if(var(l) < 2)
+//      continue;
     fprintf(log_file, "%s%d ", sign(l) ? "" : "-", var(l)+1);
   }
 }
@@ -76,6 +88,7 @@ int intro(Clause* cl) {
 
 int infer(Lit l, Clause* cl) {
 #ifdef CHECK_LOG
+  assert(sat.value(l) != l_Undef);
   for(int ii = 1; ii < cl->size(); ii++) {
     assert(sat.value((*cl)[ii]) == l_False);
   }
@@ -85,10 +98,16 @@ int infer(Lit l, Clause* cl) {
     cl->ident = ++infer_count;
     temporaries.push(cl->ident);
   } else if(cl->ident) {
+#ifdef CHECK_LOG
+    assert((*cl)[0] == l);
+#endif
     return cl->ident;
   } else {
     cl->ident = ++infer_count;
   }
+#ifdef CHECK_LOG
+    assert((*cl)[0] == l);
+#endif
 
   set_hint(cl->origin);
 
@@ -140,12 +159,17 @@ void del(Clause* cl) {
     return;
 
   fprintf(log_file, "d %d\n", cl->ident);  
+  cl->ident = 0;
 }
 
 inline Clause* unit_clause(Lit l) {
+#ifdef CHECK_LOG
+  assert(sat.value(l) == l_True);
+#endif
   vec<Lit> ps; ps.push(l);
   Clause* r = Clause_new(ps);
   r->origin = 0;
+  r->temp_expl = false;
   return r;
 }
 
@@ -180,7 +204,7 @@ void bind_ivar(int ivar_id, const std::string& sym) {
 
 void bind_bvar(Lit l, const std::string& sym) {
   // Don't actually save; just write
-  fprintf(lit_file, "%d [%s %s 1]\n", var(l), sym.c_str(), sign(l) ? ">=" : "<");
+  fprintf(lit_file, "%d [%s %s 1]\n", var(l)+1, sym.c_str(), sign(l) ? ">=" : "<");
 }
 
 };

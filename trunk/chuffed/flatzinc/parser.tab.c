@@ -2885,7 +2885,7 @@ yyreduce:
 #line 1165 "flatzinc/parser.yxx"
     { 
 #ifdef LOGGING
-        logging::active_item++; 
+        logging::active_item++;
 #endif
         ParserState *pp = static_cast<ParserState*>(parm);
 #if EXPOSE_INT_LITS

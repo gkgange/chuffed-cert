@@ -1,7 +1,7 @@
 CC = g++
 #CC = ~/gcc-4.3.0/bin/g++
-#CPPFLAGS = -g -O3 -I . -I../
-CPPFLAGS = -g -O0 -I . -I../
+CPPFLAGS = -g -O3 -I . -I../
+#CPPFLAGS = -g -O0 -I . -I../
 CPPFLAGS += -Wall -Wno-non-virtual-dtor -Wno-unused-function -Wno-deprecated
 #CPPFLAGS += -DNDEBUG
 #CPPFLAGS += -pg

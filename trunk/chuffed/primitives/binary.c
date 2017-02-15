@@ -1,6 +1,8 @@
 #include <chuffed/core/propagator.h>
 #include <chuffed/mip/mip.h>
 
+#include <chuffed/core/logging.h>
+
 // x >= y <- r
 
 template <int U, int V, int R = 0>
@@ -197,8 +199,15 @@ void bin_linear(IntVar* x, IntVar* y, IntRelType t, int c) {
 
 struct IRR {
 	IntVar* x; IntRelType t; int c; BoolView r;
+#ifdef LOGGING
+  unsigned int origin;
+#endif
 	IRR(IntVar* _x, IntRelType _t, int _c, BoolView _r) :
-		x(_x), t(_t), c(_c), r(_r) {}
+		x(_x), t(_t), c(_c), r(_r)
+#ifdef LOGGING
+  , origin(logging::active_item)
+#endif
+     {}
 };
 
 vec<IRR> ircs;
@@ -369,6 +378,9 @@ void int_rel_reif_real(IntVar* x, IntRelType t, int c, BoolView r) {
 
 void process_ircs() {
 	for (int i = 0; i < ircs.size(); i++) {
+#ifdef ORIGIN
+    logging::active_item = ircs[i].origin;
+#endif
 		int_rel_reif_real(ircs[i].x, ircs[i].t, ircs[i].c, ircs[i].r);
 	}
 	ircs.clear(true);

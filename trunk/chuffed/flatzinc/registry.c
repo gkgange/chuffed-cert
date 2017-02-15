@@ -92,7 +92,11 @@ namespace FlatZinc {
 					ia[i] = s->bv[a->a[i]->getBoolVar()];
 				} else {
 					bool value = a->a[i]->getBool();
+#ifdef LOGGING
+          ia[i] = BoolView(Lit(0, value));
+#else
 					ia[i] = newBoolVar(value, value);
+#endif
 				}
 			}
 		}
@@ -119,7 +123,11 @@ namespace FlatZinc {
 			if (n->isBoolVar()) {
 				return s->bv[n->getBoolVar()];
 			}	else {
+#ifdef LOGGING
+        return BoolView(Lit(0, n->getBool()));
+#else
 				return newBoolVar(n->getBool(), n->getBool());
+#endif
 			}
 		}
 

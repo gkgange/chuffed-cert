@@ -21,6 +21,14 @@ void IntVarEL::initVLits() {
 	if (base_vlit != INT_MIN) return;
 	initVals();
 	if (lit_min == INT_MIN) { lit_min = min; lit_max = max; }
+/*
+#ifdef LOGGING
+    if(lit_min == lit_max) {
+      base_vlit = 2 * (-lit_min) + 1;
+      return;
+    }
+#endif
+*/
 	base_vlit = 2*(sat.nVars()-lit_min);
 	sat.newVar(lit_max-lit_min+1, ChannelInfo(var_id, 1, 0, lit_min));
 	for (int i = lit_min; i <= lit_max; i++) {
@@ -32,6 +40,14 @@ void IntVarEL::initVLits() {
 void IntVarEL::initBLits() {
 	if (base_blit != INT_MIN) return;
 	if (lit_min == INT_MIN) { lit_min = min; lit_max = max; }
+/*
+#ifdef LOGGING
+  if(lit_min == lit_max) {
+    base_blit = 2 * (-lit_min) + 1;
+    return;
+  }
+#endif
+*/
 	base_blit = 2*(sat.nVars()-lit_min)+1;
 	sat.newVar(lit_max-lit_min+2, ChannelInfo(var_id, 1, 1, lit_min-1));
 	for (int i = lit_min; i <= min; i++) sat.cEnqueue(getGELit(i), NULL);

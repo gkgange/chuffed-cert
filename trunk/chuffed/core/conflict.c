@@ -178,6 +178,7 @@ void SAT::getLearntClause() {
 	Clause* expl = confl;
 	Reason last_reason = NULL;
 #ifdef LOGGING
+  assert(logging::antecedents.size() == 0);
   expl->origin = logging::active_item;
   logging::antecedents.push(logging::infer((*expl)[0], expl)); 
 #endif
@@ -210,7 +211,9 @@ void SAT::getLearntClause() {
 		}
 
 
+#ifndef LOGGING
 FindNextExpl:
+#endif
 
 		assert(pathC > 0);
 
@@ -223,7 +226,9 @@ FindNextExpl:
 
 		if (pathC == 0 && flags[var(p)].uipable) break;
 
+#ifndef LOGGING
 		if (last_reason == reason[var(p)]) goto FindNextExpl;
+#endif
 		last_reason = reason[var(p)];
 		expl = getExpl(p);
 #ifdef LOGGING

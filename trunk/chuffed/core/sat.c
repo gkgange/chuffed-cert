@@ -31,6 +31,11 @@ inline void SAT::insertVarOrder(int x) {
 }
 
 inline void SAT::setConfl(Lit p, Lit q) {
+#ifdef LOGGING
+  if(short_confl->ident) {
+    logging::del(short_confl);
+  }
+#endif
 	(*short_confl)[0] = p;
 	(*short_confl)[1] = q;
 	confl = short_confl;
@@ -164,8 +169,10 @@ void SAT::removeLazyVar(int v) {
 	} else NEVER;
 }
 
+// FIXME: Special case this.
 void SAT::addClause(Lit p, Lit q) {
 	if (value(p) == l_True || value(q) == l_True) return;
+#ifndef LOGGING
 	if (value(p) == l_False && value(q) == l_False) {
 		assert(false);
 		TL_FAIL();
@@ -180,7 +187,6 @@ void SAT::addClause(Lit p, Lit q) {
 		enqueue(p);
 		return;
 	}
-#ifndef LOGGING
 	bin_clauses++;
 	watches[toInt(~p)].push(q);
 	watches[toInt(~q)].push(p);
@@ -192,6 +198,7 @@ void SAT::addClause(Lit p, Lit q) {
 
 void SAT::addClause(vec<Lit>& ps, bool one_watch) {
 	int i, j;
+#ifndef LOGGING
 	for (i = j = 0; i < ps.size(); i++) {
 		if (value(ps[i]) == l_True) return;
 		if (value(ps[i]) == l_Undef) ps[j++] = ps[i];
@@ -201,6 +208,17 @@ void SAT::addClause(vec<Lit>& ps, bool one_watch) {
 		assert(false);
 		TL_FAIL();
 	}
+#else
+  j = 0;
+  for (i = 0; i < ps.size(); i++) {
+    if(value(ps[i]) == l_True) return;
+    if(value(ps[i]) == l_Undef) std::swap(ps[j++], ps[i]);
+  }
+  if(j == 0) {
+    assert(false);
+    TL_FAIL();
+  }
+#endif
 	addClause(*Clause_new(ps), one_watch);
 }
 
@@ -240,6 +258,12 @@ void SAT::addClause(Clause& c, bool one_watch) {
 }
 
 void SAT::removeClause(Clause& c) {
+#ifdef LOGGING
+  assert(!c.temp_expl);
+  if(c.ident) {
+    logging::del(&c);
+  }
+#endif
 	assert(c.size() > 1);
 	watches[toInt(~c[0])].remove(&c);
 	watches[toInt(~c[1])].remove(&c);

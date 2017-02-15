@@ -145,7 +145,7 @@ static inline Reason mk_reason(Lit p) {
 
 static inline Reason mk_reason(Lit p, Lit q) {
   Clause* c = Reason_new(3);
-  (*c)[1] = p; (*c)[2] = p;
+  (*c)[1] = p; (*c)[2] = q;
   return c;
 }
 

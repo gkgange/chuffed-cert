@@ -32,12 +32,14 @@ void array_int_element(IntVar* _x, vec<int>& a, IntVar* _y, int offset) {
 
 	vec<int> z;
 	for (int i = _x->getMin()-offset; i <= _x->getMax()-offset; i++) {
+#ifndef LOGGING
 		if (!_x->indomain(i+offset)) continue;
 		if (!_y->indomain(a[i])) continue;
+#endif
 		z.push(a[i]);
 	}
 
-#if 0
+#ifndef LOGGING
 	_y->specialiseToSL(z);
 #else
 	_y->specialiseToEL();
