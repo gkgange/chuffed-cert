@@ -27,6 +27,13 @@
 #include <chuffed/globals/mddglobals.h>
 #include <chuffed/mdd/opts.h>
 
+// FIXME: Find a better way of dealing with this.
+#ifdef LOGGING
+namespace logging {
+void bind_atom(Lit l, IntVar* v, IntRelType r, int k);
+};
+#endif
+
 namespace FlatZinc {
 
 	Registry& registry(void) {
@@ -495,12 +502,19 @@ namespace FlatZinc {
 				BoolView r2 = newBoolVar();
 				int_rel_reif(v, IRT_GE, sl->min, r1);
 				int_rel_reif(v, IRT_LE, sl->max, r2);
+#ifdef LOGGING
+        logging::bind_atom(r1.getLit(1), v, IRT_GE, sl->min);
+        logging::bind_atom(r2.getLit(1), v, IRT_LE, sl->max);
+#endif
 				bool_rel(r1, BRT_AND, r2, r);
       } else {
 				vec<BoolView> rs;
 				for (unsigned int i = 0; i < sl->s.size(); i++) {
 					rs.push(newBoolVar());
 					int_rel_reif(v, IRT_EQ, sl->s[i], rs.last());
+#ifdef LOGGING
+          logging::bind_atom(rs.last().getLit(1), v, IRT_EQ, sl->s[i]);
+#endif
 				}
 				array_bool_or(rs, r);
       }

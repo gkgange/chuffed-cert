@@ -5,6 +5,7 @@
 #include <chuffed/core/sat-types.h>
 #include <chuffed/core/logging.h>
 #include <chuffed/core/sat.h>
+#include <chuffed/primitives/primitives.h>
 
 #define CHECK_LOG
 
@@ -205,6 +206,23 @@ void bind_ivar(int ivar_id, const std::string& sym) {
 void bind_bvar(Lit l, const std::string& sym) {
   // Don't actually save; just write
   fprintf(lit_file, "%d [%s %s 1]\n", var(l)+1, sym.c_str(), sign(l) ? ">=" : "<");
+}
+
+const char* irt_string[] = {
+	"=",    // IRT_EQ
+	"!=",   // IRT_NE
+	"<=",   // IRT_LE
+	"<",    //IRT_LT
+	">=",   // IRT_GE
+	">"    // IRT_GT
+};
+
+void bind_atom(Lit l, IntVar* v, IntRelType r, int k) {
+  if(sign(l)) {
+    fprintf(lit_file, "%d [%s %s %d]\n", var(l)+1, ivar_idents[v->var_id].c_str(), irt_string[r], k);
+  }  else {
+    fprintf(lit_file, "%d [%s %s %d]\n", var(l)+1, ivar_idents[v->var_id].c_str(), irt_string[!r], k);
+  }
 }
 
 };
