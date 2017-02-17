@@ -23,11 +23,17 @@ FILE* log_file = stderr;
 FILE* lit_file = stderr;
 
 void init(void) {
-  log_file = fopen("log.dres", "w");
-  lit_file = fopen("log.lit","w");
+  if(!so.logging)
+    return;
+
+  log_file = fopen(so.logfile, "w");
+  lit_file = fopen(so.litfile,"w");
 }
 
 void finalize(void) {
+  if(!so.logging)
+    return;
+
   // Output literal semantics   
   fprintf(lit_file, "1 [lit_True >= 1]\n");
   fprintf(lit_file, "2 [lit_True < 1]\n");
@@ -64,15 +70,19 @@ inline void set_hint(unsigned int hint) {
 }
 
 inline void log_lits(Clause* cl) {
+  if(!so.logging)
+    return;
+
   for(int ii = 0; ii < cl->size(); ii++) {
     Lit l((*cl)[ii]);
-//    if(var(l) < 2)
-//      continue;
     fprintf(log_file, "%s%d ", sign(l) ? "" : "-", var(l)+1);
   }
 }
 
 int intro(Clause* cl) {
+  if(!so.logging)
+    return INT_MAX;
+
   assert(!cl->temp_expl);
   if(cl->ident) {
     return cl->ident;
@@ -88,6 +98,8 @@ int intro(Clause* cl) {
 }
 
 int infer(Lit l, Clause* cl) {
+  if(!so.logging)
+    return INT_MAX;
 #ifdef CHECK_LOG
   assert(sat.value(l) != l_Undef);
   for(int ii = 1; ii < cl->size(); ii++) {
@@ -119,6 +131,10 @@ int infer(Lit l, Clause* cl) {
 }
 
 int log_resolve(Clause* cl, vec<int>& antecedents) {
+  if(!so.logging) {
+    antecedents.clear();
+    return INT_MAX;
+  }
   cl->origin = 0;
   cl->ident = ++infer_count;
 
@@ -135,6 +151,10 @@ int log_resolve(Clause* cl, vec<int>& antecedents) {
 }
 
 int resolve(Clause* cl) {
+  if(!so.logging) {
+    antecedents.clear();
+    return INT_MAX;
+  }
   int ident = log_resolve(cl, antecedents);
 
   for(int ii = 0; ii < temporaries.size(); ii++) {
@@ -148,6 +168,9 @@ int resolve(Clause* cl) {
 }
 
 void empty(vec<int>& antecedents) {
+  if(!so.logging)
+    return;
+
   fprintf(log_file, "%d 0 ", ++infer_count);
   for(int ii = 0; ii < antecedents.size(); ii++) {
     fprintf(log_file, "%d ", antecedents[ii]);
@@ -156,6 +179,8 @@ void empty(vec<int>& antecedents) {
 }
 
 void del(Clause* cl) {
+  if(!so.logging)
+    return;
   if(!cl->ident || cl->temp_expl)
     return;
 
@@ -164,6 +189,8 @@ void del(Clause* cl) {
 }
 
 inline Clause* unit_clause(Lit l) {
+  if(!so.logging)
+    return NULL;
 #ifdef CHECK_LOG
   assert(sat.value(l) == l_True);
 #endif
@@ -175,6 +202,8 @@ inline Clause* unit_clause(Lit l) {
 }
 
 int unit(Lit l) {
+  if(!so.logging)
+    return INT_MAX;
 #ifdef CHECK_LOG
   assert(sat.value(l) == l_True);
 #endif
@@ -198,12 +227,16 @@ int unit(Lit l) {
 };
 
 void bind_ivar(int ivar_id, const std::string& sym) {
+  if(!so.logging)
+    return;
   while(ivar_idents.size() <= ivar_id)
     ivar_idents.push_back("UNDEF");
   ivar_idents[ivar_id] = sym;
 }
 
 void bind_bvar(Lit l, const std::string& sym) {
+  if(!so.logging)
+    return;
   // Don't actually save; just write
   fprintf(lit_file, "%d [%s %s 1]\n", var(l)+1, sym.c_str(), sign(l) ? ">=" : "<");
 }
@@ -218,6 +251,8 @@ const char* irt_string[] = {
 };
 
 void bind_atom(Lit l, IntVar* v, IntRelType r, int k) {
+  if(!so.logging)
+    return;
   if(sign(l)) {
     fprintf(lit_file, "%d [%s %s %d]\n", var(l)+1, ivar_idents[v->var_id].c_str(), irt_string[r], k);
   }  else {

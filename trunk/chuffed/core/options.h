@@ -112,6 +112,12 @@ public:
 	// for Nick's test (defaults probably work best in practice)
 	bool alldiff_cheat;              // if n vars over n vals, enforce that all vals are taken
 	bool alldiff_stage;              // if bounds or domain consistency, put value propagator too
+#ifdef LOGGING
+  // Proof logging options
+  bool logging;   // Do we perform logging for this problem?
+  const char* litfile;  // Where to record the literal semantics?
+  const char* logfile;  // Where to record the proof trace?
+#endif
 
 	Options();
 

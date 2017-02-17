@@ -78,6 +78,11 @@ Options::Options() :
 
 	, alldiff_cheat(true)
 	, alldiff_stage(true)
+#ifdef LOGGING
+  , logging(false)
+  , litfile("log.lit")
+  , logfile("log.dres")
+#endif
 {}
 
 char* hasPrefix(char* str, const char* prefix) {
@@ -98,6 +103,11 @@ void parseOptions(int& argc, char**& argv) {
 	#define parseBoolArg(name)                                \
 	if ((value = hasPrefix(argv[i], "-" #name "="))) {        \
 		so.name = (strcmp(value, "true") == 0);                 \
+	} else 
+
+	#define parseStringArg(name)                                \
+	if ((value = hasPrefix(argv[i], "-" #name "="))) {        \
+		so.name = value;                 \
 	} else 
 
 	for (i = j = 1; i < argc; i++) {
@@ -172,6 +182,11 @@ void parseOptions(int& argc, char**& argv) {
 		parseBoolArg(alldiff_cheat)
 		parseBoolArg(alldiff_stage)
 		
+#ifdef LOGGING
+    parseBoolArg(logging)
+    parseStringArg(litfile)
+    parseStringArg(logfile)
+#endif
 		if (strcmp(argv[i], "-a") == 0) {
 			so.nof_solutions = 0;
 		} else if (strcmp(argv[i], "-f") == 0) {

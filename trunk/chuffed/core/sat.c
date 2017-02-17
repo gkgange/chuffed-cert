@@ -311,7 +311,8 @@ void SAT::simplifyDB() {
 
 bool SAT::simplify(Clause& c) {
 #ifdef LOGGING
-  assert(c.ident);
+  if(so.logging)
+    assert(c.ident);
 #endif
 	if (value(c[0]) == l_True) return true;
 	if (value(c[1]) == l_True) return true;
@@ -327,17 +328,19 @@ bool SAT::simplify(Clause& c) {
     }
     if (value(c[i]) == l_Undef)
       c[j++] = c[i];
-    else
+    else if(so.logging)
       logging::antecedents.push(logging::unit(~c[i]));
 #endif
 	}
 	c.sz = j;
 #ifdef LOGGING
-  if(logging::antecedents.size() > 0) {
-    logging::antecedents.push(c.ident);
-    c.ident = 0;
-    logging::resolve(&c);
-    assert(logging::antecedents.size() == 0);
+  if(so.logging) {
+    if(logging::antecedents.size() > 0) {
+      logging::antecedents.push(c.ident);
+      c.ident = 0;
+      logging::resolve(&c);
+      assert(logging::antecedents.size() == 0);
+    }
   }
 #endif
 	return false;
