@@ -26,6 +26,8 @@ void empty(vec<int>& ants);
 int resolve(Clause* cl);
 void del(Clause* cl);
 
+void save_model(void);
+
 void finalize(void);
 
 // Variable naming

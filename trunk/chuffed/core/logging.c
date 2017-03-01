@@ -13,14 +13,67 @@ namespace logging {
 unsigned int active_item = 0;
 unsigned int infer_count = 0;
 
-static unsigned int active_hint;
+static unsigned int active_hint = 0;
 vec<int> antecedents;
 vec<int> temporaries;
 
 static std::vector<std::string> ivar_idents = std::vector<std::string>();
 
+struct binding {
+  binding(const std::string& sym, Lit l)
+    : ident(sym), kind(B_Lit), lit(toInt(l)) { }
+  binding(const std::string& sym, IntVar* v)
+    : ident(sym), kind(B_Ivar), var(v) { }
+
+  enum BKind { B_Lit, B_Ivar };
+  std::string ident;
+  BKind kind;
+  union {
+    int lit;
+    IntVar* var;
+  };
+  int value;
+};
+static bool has_model = false;
+static std::vector<binding> bindings;
+
 FILE* log_file = stderr;
 FILE* lit_file = stderr;
+
+void save_model(void) {
+  if(!so.logging)
+    return;
+  has_model = true;
+  for(unsigned int ii = 0; ii < bindings.size(); ii++) {
+    binding& b(bindings[ii]);
+    if(b.kind == binding::B_Lit) {
+      assert(sat.value(toLit(b.lit)) != l_Undef);
+      b.value = (sat.value(toLit(b.lit)) != l_False);
+    } else {
+      assert(b.var->isFixed());
+      b.value = b.var->getVal();
+    }
+  }
+}
+
+void log_model(void) {
+  if(!so.logging)
+    return;
+  if(!has_model)
+    return; 
+
+  FILE* sol_file = fopen(so.solfile, "w");
+  
+  fprintf(sol_file, "[");
+  if(bindings.size() > 0) {
+    fprintf(sol_file, "%s = %d", bindings[0].ident.c_str(), bindings[0].value);
+    for(unsigned int ii = 1; ii < bindings.size(); ii++) {
+      fprintf(sol_file, ", %s = %d", bindings[ii].ident.c_str(), bindings[ii].value);
+    }
+  }
+  fprintf(sol_file, "]");
+  fclose(sol_file); 
+}
 
 void init(void) {
   if(!so.logging)
@@ -34,6 +87,8 @@ void finalize(void) {
   if(!so.logging)
     return;
 
+  log_model();
+
   // Output literal semantics   
   fprintf(lit_file, "1 [lit_True >= 1]\n");
   fprintf(lit_file, "2 [lit_True < 1]\n");
@@ -42,18 +97,19 @@ void finalize(void) {
 	  if (ci.cons_type == 1) {
       if(ci.cons_id >= ivar_idents.size()) {
         fprintf(stderr, "WARNING: variable %d has no name.\n", ci.cons_id);
-        if(toLbool(sat.assigns[vi]) == l_True) {
+        if(toLbool(sat.assigns[vi]) == l_False) {
           fprintf(lit_file, "%d [lit_True >= 1]\n", vi+1); 
-        } else if(toLbool(sat.assigns[vi]) == l_False) {
+        } else if(toLbool(sat.assigns[vi]) == l_True) {
             fprintf(lit_file, "%d [lit_True < 1]\n", vi+1);
         }
         continue;
       }
-      fprintf(lit_file, "%d [%s %s %d]\n", vi+1, ivar_idents[ci.cons_id].c_str(), ci.val_type ? ">=" : "=", ci.val);
+      fprintf(lit_file, "%d [%s %s %d]\n", vi+1, ivar_idents[ci.cons_id].c_str(), ci.val_type ? ">" : "=", ci.val);
       // fprintf(lit_file, "%d [v%d %s %d]\n", vi, vi+1, ci.val_type ? ">=" : "=", ci.val);
     }
   }
 
+  
   fclose(log_file);
   fclose(lit_file);
 }
@@ -61,7 +117,7 @@ void finalize(void) {
 inline void set_hint(unsigned int hint) {
   if(hint != active_hint) {
     if(hint) {
-      fprintf(log_file, "c %d\n", hint);
+      fprintf(log_file, "c c%d\n", hint);
     } else {
       fprintf(log_file, "c -\n");
     }
@@ -229,6 +285,9 @@ int unit(Lit l) {
 void bind_ivar(int ivar_id, const std::string& sym) {
   if(!so.logging)
     return;
+
+  bindings.push_back(binding(sym, engine.vars[ivar_id]));
+
   while(ivar_idents.size() <= ivar_id)
     ivar_idents.push_back("UNDEF");
   ivar_idents[ivar_id] = sym;
@@ -238,6 +297,8 @@ void bind_bvar(Lit l, const std::string& sym) {
   if(!so.logging)
     return;
   // Don't actually save; just write
+  bindings.push_back(binding(sym, l));
+
   fprintf(lit_file, "%d [%s %s 1]\n", var(l)+1, sym.c_str(), sign(l) ? ">=" : "<");
 }
 

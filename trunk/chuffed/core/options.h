@@ -117,6 +117,7 @@ public:
   bool logging;   // Do we perform logging for this problem?
   const char* litfile;  // Where to record the literal semantics?
   const char* logfile;  // Where to record the proof trace?
+  const char* solfile;  // Where to record the optimal solution?
 #endif
 
 	Options();

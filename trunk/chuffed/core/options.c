@@ -82,6 +82,7 @@ Options::Options() :
   , logging(false)
   , litfile("log.lit")
   , logfile("log.dres")
+  , solfile("log.sol")
 #endif
 {}
 

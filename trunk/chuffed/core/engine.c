@@ -322,6 +322,9 @@ RESULT Engine::search() {
 					printf("----------\n");
           fflush(stdout);
 				}
+#ifdef LOGGING
+        logging::save_model();
+#endif
 				if (!opt_var) {
 					if (solutions == so.nof_solutions) return RES_SAT;
 					if (so.lazy) blockCurrentSol();

@@ -378,7 +378,7 @@ void int_rel_reif_real(IntVar* x, IntRelType t, int c, BoolView r) {
 
 void process_ircs() {
 	for (int i = 0; i < ircs.size(); i++) {
-#ifdef ORIGIN
+#ifdef LOGGING
     logging::active_item = ircs[i].origin;
 #endif
 		int_rel_reif_real(ircs[i].x, ircs[i].t, ircs[i].c, ircs[i].r);
