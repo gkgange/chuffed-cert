@@ -331,6 +331,17 @@ RESULT Engine::search() {
 					goto Conflict;
 				}
 				if (!constrain()) {
+#ifdef LOGGING
+          // Failed to tighten objective.
+          vec<int> ants;
+          Lit obj_lit = (opt_type ? opt_var->getMaxLit() : opt_var->getMinLit());
+
+          // Create the unit clause
+          Clause* r = Reason_new(1);
+          ants.push(logging::infer(obj_lit, r));
+          ants.push(logging::unit(~obj_lit));
+          logging::empty(ants);
+#endif
 					return RES_GUN;
 				}
 				continue;

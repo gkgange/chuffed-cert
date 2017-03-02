@@ -48,15 +48,28 @@
 %predicate bool_lin_gt(array[int] of int: a, array[int] of var bool: x,
 %                      var int: c);
 
-predicate bool_sum_eq(array[int] of var bool: x, var int: c); %=
+%predicate bool_sum_eq(array[int] of var bool: x, var int: c); %=
 %    bool_lin_eq([1 | i in index_set(x)],x,c);
-predicate bool_sum_ne(array[int] of var bool: x, var int: c); %=
+%predicate bool_sum_ne(array[int] of var bool: x, var int: c); %=
 %    bool_lin_ne([1 | i in index_set(x)],x,c);
-predicate bool_sum_le(array[int] of var bool: x, var int: c); %=
+%predicate bool_sum_le(array[int] of var bool: x, var int: c); %=
 %    bool_lin_le([1 | i in index_set(x)],x,c);
-predicate bool_sum_lt(array[int] of var bool: x, var int: c); %=
+%predicate bool_sum_lt(array[int] of var bool: x, var int: c); %=
 %    bool_lin_lt([1 | i in index_set(x)],x,c);
-predicate bool_sum_ge(array[int] of var bool: x, var int: c); %=
+%predicate bool_sum_ge(array[int] of var bool: x, var int: c); %=
 %    bool_lin_ge([1 | i in index_set(x)],x,c);
-predicate bool_sum_gt(array[int] of var bool: x, var int: c); %=
+%predicate bool_sum_gt(array[int] of var bool: x, var int: c); %=
 %    bool_lin_gt([1 | i in index_set(x)],x,c);
+predicate bool_sum_eq(array[int] of var bool: x, var int: c) =
+  int_lin_eq([1] ++ [-1 | i in index_set(x)], [c] ++ [bool2int(x[i]) | i in index_set(x)], 0);
+predicate bool_sum_ne(array[int] of var bool: x, var int: c) =
+  int_lin_ne([1] ++ [-1 | i in index_set(x)], [c] ++ [bool2int(x[i]) | i in index_set(x)], 0);
+predicate bool_sum_le(array[int] of var bool: x, var int: c) =
+  int_lin_le([-1] ++ [1 | i in index_set(x)], [c] ++ [bool2int(x[i]) | i in index_set(x)], 0);
+predicate bool_sum_ge(array[int] of var bool: x, var int: c) =
+  int_lin_le([1] ++ [-1 | i in index_set(x)], [c] ++ [bool2int(x[i]) | i in index_set(x)], 0);
+
+predicate array_bool_or(array[int] of var bool: xs, var bool: y) =
+  bool_clause(xs, [y]) /\ forall (x in xs) (bool_clause([y], [x]));
+predicate array_bool_and(array[int] of var bool: xs, var bool: y) =
+  bool_clause([y], xs) /\ forall (x in xs) (bool_clause([x], [y]));

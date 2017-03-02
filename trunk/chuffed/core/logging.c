@@ -64,12 +64,9 @@ void log_model(void) {
 
   FILE* sol_file = fopen(so.solfile, "w");
   
-  fprintf(sol_file, "[");
-  if(bindings.size() > 0) {
-    fprintf(sol_file, "%s = %d", bindings[0].ident.c_str(), bindings[0].value);
-    for(unsigned int ii = 1; ii < bindings.size(); ii++) {
-      fprintf(sol_file, ", %s = %d", bindings[ii].ident.c_str(), bindings[ii].value);
-    }
+  fprintf(sol_file, "[lit_True = 1");
+  for(unsigned int ii = 0; ii < bindings.size(); ii++) {
+    fprintf(sol_file, ", %s = %d", bindings[ii].ident.c_str(), bindings[ii].value);
   }
   fprintf(sol_file, "]");
   fclose(sol_file); 
@@ -108,7 +105,6 @@ void finalize(void) {
       // fprintf(lit_file, "%d [v%d %s %d]\n", vi, vi+1, ci.val_type ? ">=" : "=", ci.val);
     }
   }
-
   
   fclose(log_file);
   fclose(lit_file);
@@ -319,6 +315,13 @@ void bind_atom(Lit l, IntVar* v, IntRelType r, int k) {
   }  else {
     fprintf(lit_file, "%d [%s %s %d]\n", var(l)+1, ivar_idents[v->var_id].c_str(), irt_string[!r], k);
   }
+}
+
+void bind_bool(Lit l, bool b) {
+  if(!so.logging)
+    return;
+
+  fprintf(lit_file, "%d [lit_True %s 1]\n", var(l)+1, sign(l)^b ? "<" : ">=");
 }
 
 };

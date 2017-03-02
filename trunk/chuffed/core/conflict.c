@@ -179,7 +179,7 @@ void SAT::getLearntClause() {
 	Reason last_reason = NULL;
 #ifdef LOGGING
   assert(logging::antecedents.size() == 0);
-  expl->origin = logging::active_item;
+//  expl->origin = logging::active_item;
   logging::antecedents.push(logging::infer((*expl)[0], expl)); 
 #endif
 

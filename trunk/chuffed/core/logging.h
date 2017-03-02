@@ -33,6 +33,7 @@ void finalize(void);
 // Variable naming
 void bind_ivar(int ivar_id, const std::string& symbol);
 void bind_bvar(Lit l, const std::string& symbol);
+void bind_bool(Lit l, bool b);
 // void bind_atom(Lit l, int ivar_id, IntRelType r, int k);
 };
 

@@ -195,7 +195,8 @@ void initfg(ParserState* pp) {
       try {
         pp->fg->newIntVar(static_cast<IntVarSpec*>(pp->intvars[i].second));
 #ifdef LOGGING
-        logging::bind_ivar(pp->fg->iv[pp->fg->intVarCount-1]->var_id, pp->intvars[i].first);
+        if(!pp->intvars[i].second->assigned)
+          logging::bind_ivar(pp->fg->iv[pp->fg->intVarCount-1]->var_id, pp->intvars[i].first);
 #endif
       } catch (FlatZinc::Error& e) {
         yyerror(pp, e.toString().c_str());
@@ -212,7 +213,10 @@ void initfg(ParserState* pp) {
         pp->fg->newBoolVar(
           static_cast<BoolVarSpec*>(pp->boolvars[i].second));
 #ifdef LOGGING
-        logging::bind_bvar(pp->fg->bv[pp->fg->boolVarCount-1].getLit(1), pp->boolvars[i].first);
+        if(pp->boolvars[i].second->assigned)
+          logging::bind_bool(pp->fg->bv[pp->fg->boolVarCount-1].getLit(1), pp->boolvars[i].second->i);
+        else
+          logging::bind_bvar(pp->fg->bv[pp->fg->boolVarCount-1].getLit(1), pp->boolvars[i].first);
 #endif
       } catch (FlatZinc::Error& e) {
         yyerror(pp, e.toString().c_str());
