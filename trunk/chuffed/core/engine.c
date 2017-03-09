@@ -54,7 +54,7 @@ inline void Engine::doFixPointStuff() {
 inline void Engine::makeDecision(DecInfo& di, int alt) {
 	++nodes;
 	if (di.var) ((IntVar*) di.var)->set(di.val, di.type ^ alt);
-	else sat.enqueue(toLit(di.val ^ alt));
+	else sat.enqueue(toLit(di.val ^ alt), NULL);
 	if (so.ldsb && di.var && di.type == 1) ldsb.processDec(sat.trail.last()[0]);
 //	if (opt_var && di.var == opt_var && ((IntVar*) di.var)->isFixed()) printf("objective = %d\n", ((IntVar*) di.var)->getVal());
 }
@@ -254,6 +254,7 @@ RESULT Engine::search() {
         vec<int> ants;
         ants.push(logging::infer((*sat.confl)[0], sat.confl));
         for(int ii = 0; ii < sat.confl->size(); ii++) {
+//           logging::push_unit(ants, ~(*sat.confl)[ii]);
           ants.push(logging::unit(~(*sat.confl)[ii]));
         }
         logging::empty(ants);
@@ -339,6 +340,7 @@ RESULT Engine::search() {
           // Create the unit clause
           Clause* r = Reason_new(1);
           ants.push(logging::infer(obj_lit, r));
+//          logging::push_unit(ants, ~obj_lit);
           ants.push(logging::unit(~obj_lit));
           logging::empty(ants);
 #endif

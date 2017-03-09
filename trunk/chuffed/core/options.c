@@ -80,6 +80,7 @@ Options::Options() :
 	, alldiff_stage(true)
 #ifdef LOGGING
   , logging(false)
+  , log_solution(false)
   , litfile("log.lit")
   , logfile("log.dres")
   , solfile("log.sol")
@@ -185,6 +186,7 @@ void parseOptions(int& argc, char**& argv) {
 		
 #ifdef LOGGING
     parseBoolArg(logging)
+    parseBoolArg(log_solution)
     parseStringArg(litfile)
     parseStringArg(logfile)
 #endif

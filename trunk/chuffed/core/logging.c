@@ -7,7 +7,7 @@
 #include <chuffed/core/sat.h>
 #include <chuffed/primitives/primitives.h>
 
-#define CHECK_LOG
+// #define CHECK_LOG
 
 namespace logging {
 unsigned int active_item = 0;
@@ -17,7 +17,29 @@ static unsigned int active_hint = 0;
 vec<int> antecedents;
 vec<int> temporaries;
 
-static std::vector<std::string> ivar_idents = std::vector<std::string>();
+struct ivar_ident {
+  ivar_ident() : is_bound(false), sym("") { }
+  ivar_ident(std::string _sym) : is_bound(true), sym(_sym) { }
+  ivar_ident(const ivar_ident& o) : is_bound(o.is_bound), sym(o.sym) { }
+  
+  ivar_ident& operator=(const ivar_ident& o) {
+    is_bound = o.is_bound;
+    sym = o.sym;
+    return *this;
+  }
+    
+  bool is_bound;
+  std::string sym;
+};
+
+static std::vector<ivar_ident> ivar_idents = std::vector<ivar_ident>();
+
+static bool ivar_is_bound(int var_id) {
+  return var_id < ivar_idents.size() && ivar_idents[var_id].is_bound;
+}
+static bool ivar_is_bound(IntVar* v) {
+  return ivar_is_bound(v->var_id);
+}
 
 struct binding {
   binding(const std::string& sym, Lit l)
@@ -41,7 +63,7 @@ FILE* log_file = stderr;
 FILE* lit_file = stderr;
 
 void save_model(void) {
-  if(!so.logging)
+  if(!so.logging && !so.log_solution)
     return;
   has_model = true;
   for(unsigned int ii = 0; ii < bindings.size(); ii++) {
@@ -57,7 +79,7 @@ void save_model(void) {
 }
 
 void log_model(void) {
-  if(!so.logging)
+  if(!so.logging && !so.log_solution)
     return;
   if(!has_model)
     return; 
@@ -81,10 +103,11 @@ void init(void) {
 }
 
 void finalize(void) {
+  if(so.logging || so.log_solution)
+    log_model();
+
   if(!so.logging)
     return;
-
-  log_model();
 
   // Output literal semantics   
   fprintf(lit_file, "1 [lit_True >= 1]\n");
@@ -92,8 +115,8 @@ void finalize(void) {
   for(int vi = 2; vi < sat.assigns.size(); vi++) {
     ChannelInfo& ci = sat.c_info[vi];
 	  if (ci.cons_type == 1) {
-      if(ci.cons_id >= ivar_idents.size()) {
-        fprintf(stderr, "WARNING: variable %d has no name.\n", ci.cons_id);
+      if(!ivar_is_bound(ci.cons_id)) {
+//        fprintf(stderr, "WARNING: variable %d has no name.\n", ci.cons_id);
         if(toLbool(sat.assigns[vi]) == l_False) {
           fprintf(lit_file, "%d [lit_True >= 1]\n", vi+1); 
         } else if(toLbool(sat.assigns[vi]) == l_True) {
@@ -101,7 +124,7 @@ void finalize(void) {
         }
         continue;
       }
-      fprintf(lit_file, "%d [%s %s %d]\n", vi+1, ivar_idents[ci.cons_id].c_str(), ci.val_type ? ">" : "=", ci.val);
+      fprintf(lit_file, "%d [%s %s %d]\n", vi+1, ivar_idents[ci.cons_id].sym.c_str(), ci.val_type ? ">" : "=", ci.val);
       // fprintf(lit_file, "%d [v%d %s %d]\n", vi, vi+1, ci.val_type ? ">=" : "=", ci.val);
     }
   }
@@ -127,6 +150,8 @@ inline void log_lits(Clause* cl) {
 
   for(int ii = 0; ii < cl->size(); ii++) {
     Lit l((*cl)[ii]);
+//    if(sat.flags[var(l)].no_log)
+//      continue;
     fprintf(log_file, "%s%d ", sign(l) ? "" : "-", var(l)+1);
   }
 }
@@ -159,9 +184,20 @@ int infer(Lit l, Clause* cl) {
   }
 #endif
   if(cl->temp_expl) {
+#if 0
     (*cl)[0] = l;
     cl->ident = ++infer_count;
     temporaries.push(cl->ident);
+#else
+    if(cl->ident) {
+      if((*cl)[0] == l)
+        return cl->ident;
+      // fprintf(log_file, "d %d\n", cl->ident);
+      temporaries.push(cl->ident);
+    }
+    (*cl)[0] = l;
+    cl->ident = ++infer_count; 
+#endif
   } else if(cl->ident) {
 #ifdef CHECK_LOG
     assert((*cl)[0] == l);
@@ -233,10 +269,15 @@ void empty(vec<int>& antecedents) {
 void del(Clause* cl) {
   if(!so.logging)
     return;
+  /*
   if(!cl->ident || cl->temp_expl)
     return;
+    */
+  if(!cl->ident)
+    return;
 
-  fprintf(log_file, "d %d\n", cl->ident);  
+  // fprintf(log_file, "d %d\n", cl->ident);
+  temporaries.push(cl->ident);
   cl->ident = 0;
 }
 
@@ -248,7 +289,10 @@ inline Clause* unit_clause(Lit l) {
 #endif
   vec<Lit> ps; ps.push(l);
   Clause* r = Clause_new(ps);
-  r->origin = 0;
+  if(sat.reason[var(l)].d.type == 3)
+    r->origin = sat.reason[var(l)].d.d2;
+  else
+    r->origin = 0;
   r->temp_expl = false;
   return r;
 }
@@ -278,23 +322,40 @@ int unit(Lit l) {
   return r->ident;
 };
 
-void bind_ivar(int ivar_id, const std::string& sym) {
+void push_unit(vec<int>& ants, Lit l) {
   if(!so.logging)
+    return;
+//  if(sat.flags[var(l)].no_log)
+//    return;
+#ifdef CHECK_LOG
+  assert(sat.value(l) == l_True);
+#endif
+  ants.push(unit(l));
+};
+
+
+void bind_ivar(int ivar_id, const std::string& sym) {
+  if(!so.logging && !so.log_solution)
     return;
 
   bindings.push_back(binding(sym, engine.vars[ivar_id]));
 
+  if(!so.logging)
+    return;
+
   while(ivar_idents.size() <= ivar_id)
-    ivar_idents.push_back("UNDEF");
-  ivar_idents[ivar_id] = sym;
+    ivar_idents.push_back(ivar_ident());
+  ivar_idents[ivar_id] = ivar_ident(sym);
 }
 
 void bind_bvar(Lit l, const std::string& sym) {
+  if(!so.logging && !so.log_solution)
+    return;
+  bindings.push_back(binding(sym, l));
+
   if(!so.logging)
     return;
   // Don't actually save; just write
-  bindings.push_back(binding(sym, l));
-
   fprintf(lit_file, "%d [%s %s 1]\n", var(l)+1, sym.c_str(), sign(l) ? ">=" : "<");
 }
 
@@ -307,13 +368,32 @@ const char* irt_string[] = {
 	">"    // IRT_GT
 };
 
+bool eval_irt(int x, IntRelType r, int k) {
+  switch(r) {
+    case IRT_EQ: return x == k;
+    case IRT_NE: return x != k;
+    case IRT_LE: return x <= k;
+    case IRT_LT: return x < k;
+    case IRT_GE: return x >= k;
+    case IRT_GT: return x > k;
+    default: NEVER;
+  }
+  return false;
+}
+
 void bind_atom(Lit l, IntVar* v, IntRelType r, int k) {
   if(!so.logging)
     return;
+  if(!ivar_is_bound(v)) {
+    assert(v->isFixed());
+    bind_bool(l, eval_irt(v->getVal(), r, k));
+    return;
+  }
+
   if(sign(l)) {
-    fprintf(lit_file, "%d [%s %s %d]\n", var(l)+1, ivar_idents[v->var_id].c_str(), irt_string[r], k);
+    fprintf(lit_file, "%d [%s %s %d]\n", var(l)+1, ivar_idents[v->var_id].sym.c_str(), irt_string[r], k);
   }  else {
-    fprintf(lit_file, "%d [%s %s %d]\n", var(l)+1, ivar_idents[v->var_id].c_str(), irt_string[!r], k);
+    fprintf(lit_file, "%d [%s %s %d]\n", var(l)+1, ivar_idents[v->var_id].sym.c_str(), irt_string[!r], k);
   }
 }
 

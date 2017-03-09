@@ -140,7 +140,12 @@ struct LitFlags {
 	unsigned int decidable : 1;            // can be used as decision var
 	unsigned int uipable   : 1;            // can be used as head of learnt clause
 	unsigned int learnable : 1;            // can be used in tail of learnt clause
+#ifdef LOGGING
+  unsigned int no_log    : 1;
+  unsigned int padding   : 4;
+#else
 	unsigned int padding   : 5;            // leave some space for other flags
+#endif
 
 	LitFlags(char f) { *((char*) this) = f; }
 	void setDecidable(bool b) { if (b) decidable = uipable = 1; else decidable = 0; }
@@ -205,7 +210,13 @@ public:
 		} d;
 		int64_t a;
 	};
-	Reason() : a(0) {}
+	// Reason() : a(0) {}
+	Reason() {
+    d.type = 3;
+#ifdef LOGGING
+    d.d2 = logging::active_item;
+#endif
+  }
 	Reason(Clause *c) : pt(c) { if (sizeof(Clause *) == 4) d.d2 = 0; }
 	Reason(int prop_id, int inf_id) { d.type = 1; d.d1 = inf_id; d.d2 = prop_id; }
 	Reason(Lit p) {

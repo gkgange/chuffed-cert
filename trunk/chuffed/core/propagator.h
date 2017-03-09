@@ -167,8 +167,13 @@ static inline Reason mk_reason(Reason r) {
 }
 #endif
 
+#ifndef LOGGING
 #define TL_SET(var, op, val) do {                                     \
 	if (var->op ## NotR(val) && !var->op(val)) TL_FAIL(); } while (0)
+#else
+#define TL_SET(var, op, val) do {                                     \
+	if (var->op ## NotR(val) && !var->op(val, Reason())) TL_FAIL(); } while (0)
+#endif
 
 
 #ifndef LOGGING

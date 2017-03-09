@@ -115,6 +115,7 @@ public:
 #ifdef LOGGING
   // Proof logging options
   bool logging;   // Do we perform logging for this problem?
+  bool log_solution;   // Do we the optimal/incumbent solution?
   const char* litfile;  // Where to record the literal semantics?
   const char* logfile;  // Where to record the proof trace?
   const char* solfile;  // Where to record the optimal solution?

@@ -1,5 +1,5 @@
 #!/bin/bash
-CCP_BASE=~/postdoc/certification/cert-cp
+CCP_BASE=~/postdoc/cert-cp
 MZN2FZN=mzn2fzn
 FZN2CMOD=${CCP_BASE}/fzn2cmod/fzn2cmod
 FDRES_SIMP=${CCP_BASE}/fdres/fdres-simp
@@ -12,7 +12,7 @@ fzn_model=`${TEMPFILE} --suffix=.fzn`
 ccp_model=`${TEMPFILE} --suffix=.fzn`
 chuffed_out=`${TEMPFILE}`
 
-${MZN2FZN} -G chuffed-cert -o ${fzn_model} $@
+${MZN2FZN} -G chuffed-cert -o >(./desparse_fzn.py > ${fzn_model}) $@
 
 ${FZN2CMOD} ${fzn_model} > ${ccp_model}
 if [ $? -ne 0 ]
@@ -53,7 +53,8 @@ solve_line=`tail -n 1 ${fzn_model}`
 obj_decl=`echo ${solve_line} | grep -o -e "minimize *[a-zA-Z_][a-zA-Z0-9_]*"`
 if [ $? -eq 0 ]
 then
-  args="${args} -objective `echo ${obj_decl} | awk '{ print $2; }'`"
+  obj=`echo ${obj_decl} | awk '{ print $2; }'`
+  args="${args} -objective ${obj}"
 else
   echo ${solve_line} | grep -q "maximize"
   if [ $? -eq 0 ]
@@ -78,4 +79,4 @@ fi
 rm ${fzn_model}
 rm ${ccp_model}
 rm ${chuffed_out}
-rm log.{sol,lit,dres,fdres}
+rm -f log.{sol,lit,dres,fdres}

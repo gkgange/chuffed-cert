@@ -114,7 +114,12 @@ public:
 	void topLevelCleanUp();
 	void simplifyDB();
 	bool simplify(Clause& c);
-	void enqueue(Lit p, Reason r = NULL);
+#ifdef LOGGING
+	void enqueue(Lit p) { enqueue(p, Reason()); }
+	void enqueue(Lit p, Reason r);
+#else
+  void enqueue(Lit p, Reason r = NULL);
+#endif
 	void cEnqueue(Lit p, Reason r);
 	void aEnqueue(Lit p, Reason r, int l);
 	void untrailToPos(vec<Lit>& t, int p);
@@ -204,6 +209,8 @@ inline Clause* SAT::getExpl(Lit p) {
 		case 1: 
 			btToPos(index, trailpos[var(p)]);
 			return _getExpl(p);
+    case 3: // Nil explanation
+      return NULL;
 		default:
 			Clause& c = *short_expl;
 #ifdef LOGGING

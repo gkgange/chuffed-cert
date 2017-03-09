@@ -21,6 +21,7 @@ void init(void);
 
 int intro(Clause* cl);
 int infer(Lit l, Clause* cl);
+void push_unit(vec<int>& ants, Lit l);
 int unit(Lit l);
 void empty(vec<int>& ants);
 int resolve(Clause* cl);

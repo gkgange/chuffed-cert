@@ -21,37 +21,43 @@ void IntVarEL::initVLits() {
 	if (base_vlit != INT_MIN) return;
 	initVals();
 	if (lit_min == INT_MIN) { lit_min = min; lit_max = max; }
-/*
-#ifdef LOGGING
-    if(lit_min == lit_max) {
-      base_vlit = 2 * (-lit_min) + 1;
-      return;
-    }
-#endif
-*/
+
 	base_vlit = 2*(sat.nVars()-lit_min);
 	sat.newVar(lit_max-lit_min+1, ChannelInfo(var_id, 1, 0, lit_min));
 	for (int i = lit_min; i <= lit_max; i++) {
-		if (!indomain(i)) sat.cEnqueue(getNELit(i), NULL);
+		if (!indomain(i)) {
+      sat.cEnqueue(getNELit(i), NULL);
+#ifdef LOGGING
+      sat.flags[var(getNELit(i))].no_log = true;
+#endif
+    }
 	}
-	if (isFixed()) sat.cEnqueue(getEQLit(min), NULL);
+	if (isFixed()) {
+    sat.cEnqueue(getEQLit(min), NULL);
+#ifdef LOGGING
+    sat.flags[var(getEQLit(min))].no_log = true;
+#endif
+  }
 }
 
 void IntVarEL::initBLits() {
 	if (base_blit != INT_MIN) return;
 	if (lit_min == INT_MIN) { lit_min = min; lit_max = max; }
-/*
-#ifdef LOGGING
-  if(lit_min == lit_max) {
-    base_blit = 2 * (-lit_min) + 1;
-    return;
-  }
-#endif
-*/
+
 	base_blit = 2*(sat.nVars()-lit_min)+1;
 	sat.newVar(lit_max-lit_min+2, ChannelInfo(var_id, 1, 1, lit_min-1));
-	for (int i = lit_min; i <= min; i++) sat.cEnqueue(getGELit(i), NULL);
-	for (int i = max; i <= lit_max; i++) sat.cEnqueue(getLELit(i), NULL);
+	for (int i = lit_min; i <= min; i++) {
+    sat.cEnqueue(getGELit(i), NULL);
+#ifdef LOGGING
+    sat.flags[var(getGELit(i))].no_log = true;
+#endif
+  }
+	for (int i = max; i <= lit_max; i++) {
+    sat.cEnqueue(getLELit(i), NULL);
+#ifdef LOGGING
+    sat.flags[var(getLELit(i))].no_log = true;
+#endif
+  }
 }
 
 void IntVarEL::setVLearnable() {

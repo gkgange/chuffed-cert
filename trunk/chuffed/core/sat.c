@@ -91,6 +91,10 @@ SAT::SAT() :
 {
 	newVar(); enqueue(Lit(0,1));
 	newVar(); enqueue(Lit(1,0));
+#ifdef LOGGING
+//  flags[0].no_log = true;
+//  flags[1].no_log = true;
+#endif
 	temp_sc = (SClause*) malloc(TEMP_SC_LEN * sizeof(int));
 	short_expl = (Clause*) malloc(sizeof(Clause) + 3 * sizeof(Lit));
 	short_confl = (Clause*) malloc(sizeof(Clause) + 2 * sizeof(Lit));
@@ -228,7 +232,12 @@ void SAT::addClause(Clause& c, bool one_watch) {
 		assert(decisionLevel() == 0);
 		if (DEBUG) fprintf(stderr, "warning: adding length 1 clause!\n");
 		if (value(c[0]) == l_False) TL_FAIL();
+#ifndef LOGGING
 		if (value(c[0]) == l_Undef) enqueue(c[0]);
+#else
+    Reason r; r.d.d2 = c.origin;
+		if (value(c[0]) == l_Undef) enqueue(c[0], r);
+#endif
 		free(&c);
 		return;
 	}
@@ -287,7 +296,8 @@ void SAT::topLevelCleanUp() {
 #ifndef LOGGING
         seen[var(trail[0][i])] = true;
 #else
-        logging::unit(trail[0][i]);
+//        if(!flags[var(trail[0][i])].no_log)
+          logging::unit(trail[0][i]);
 #endif
         trailpos[var(trail[0][i])] = -1;
   }
@@ -329,7 +339,7 @@ bool SAT::simplify(Clause& c) {
     if (value(c[i]) == l_Undef)
       c[j++] = c[i];
     else if(so.logging)
-      logging::antecedents.push(logging::unit(~c[i]));
+      logging::push_unit(logging::antecedents, ~c[i]);
 #endif
 	}
 	c.sz = j;
