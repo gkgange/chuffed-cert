@@ -15,6 +15,14 @@ IntVarEL::IntVarEL(const IntVar& other) :
 	initVals();
 	initVLits();
 	initBLits();
+#ifdef LOGGING
+  if(isFixed()) {
+    Clause* r = Reason_new(3); r->origin = 0;
+    (*r)[1] = getLELit(min-1); (*r)[2] = getGELit(max+1);
+    sat.cEnqueue(getEQLit(min), r);
+    sat.flags[var(getEQLit(min))].no_log = true;
+  }
+#endif
 }
 
 void IntVarEL::initVLits() {
@@ -25,19 +33,23 @@ void IntVarEL::initVLits() {
 	base_vlit = 2*(sat.nVars()-lit_min);
 	sat.newVar(lit_max-lit_min+1, ChannelInfo(var_id, 1, 0, lit_min));
 	for (int i = lit_min; i <= lit_max; i++) {
+#ifndef LOGGING
 		if (!indomain(i)) {
       sat.cEnqueue(getNELit(i), NULL);
-#ifdef LOGGING
-      sat.flags[var(getNELit(i))].no_log = true;
-#endif
     }
+#else
+    if(!indomain(i)) {
+      assert(i < min || max < i);
+      sat.cEnqueue(getNELit(i), i < min ? lb0_reason : ub0_reason);
+      sat.flags[var(getNELit(i))].no_log = true;
+    }
+#endif
 	}
+#ifndef LOGGING
 	if (isFixed()) {
     sat.cEnqueue(getEQLit(min), NULL);
-#ifdef LOGGING
-    sat.flags[var(getEQLit(min))].no_log = true;
-#endif
   }
+#endif
 }
 
 void IntVarEL::initBLits() {
@@ -47,14 +59,18 @@ void IntVarEL::initBLits() {
 	base_blit = 2*(sat.nVars()-lit_min)+1;
 	sat.newVar(lit_max-lit_min+2, ChannelInfo(var_id, 1, 1, lit_min-1));
 	for (int i = lit_min; i <= min; i++) {
+#ifndef LOGGING
     sat.cEnqueue(getGELit(i), NULL);
-#ifdef LOGGING
+#else
+    sat.cEnqueue(getGELit(i), lb0_reason);
     sat.flags[var(getGELit(i))].no_log = true;
 #endif
   }
 	for (int i = max; i <= lit_max; i++) {
+#ifndef LOGGING
     sat.cEnqueue(getLELit(i), NULL);
-#ifdef LOGGING
+#else
+    sat.cEnqueue(getLELit(i), ub0_reason);
     sat.flags[var(getLELit(i))].no_log = true;
 #endif
   }

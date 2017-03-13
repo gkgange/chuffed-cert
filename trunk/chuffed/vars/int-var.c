@@ -21,6 +21,10 @@ IntVar::IntVar(int _min, int _max) :
 	, shadow_val(0)
 	, in_scip(false)
 	, all_in_scip(true)
+#ifdef LOGGING
+  , lb0_reason(NULL)
+  , ub0_reason(NULL)
+#endif
 	, vals(NULL)
 	, preferred_val(PV_MIN)
 	, activity(0)
@@ -250,6 +254,10 @@ inline void IntVar::updateFixed() {
 bool IntVar::setMin(int64_t v, Reason r, bool channel) {
 	assert(setMinNotR(v));
 	if (v > max) return false;
+#ifdef LOGGING
+  lb0_reason = r;
+#endif
+
 #if INT_DOMAIN_LIST
 	if (vals) {
 		int i;
@@ -273,7 +281,11 @@ bool IntVar::setMin(int64_t v, Reason r, bool channel) {
 
 bool IntVar::setMax(int64_t v, Reason r, bool channel) {
 	assert(setMaxNotR(v));
+#ifdef LOGGING
+  ub0_reason = r;
+#endif
 	if (v < min) return false;
+
 #if INT_DOMAIN_LIST
 	if (vals) {
 		int i;
@@ -298,8 +310,18 @@ bool IntVar::setMax(int64_t v, Reason r, bool channel) {
 bool IntVar::setVal(int64_t v, Reason r, bool channel) {
 	assert(setValNotR(v));
 	if (!indomain(v)) return false;
-	if (min < v) { min = v; changes |= EVENT_C | EVENT_L | EVENT_F; }
-	if (max > v) { max = v; changes |= EVENT_C | EVENT_U | EVENT_F; }
+	if (min < v) {
+    min = v; changes |= EVENT_C | EVENT_L | EVENT_F;
+#ifdef LOGGING
+    lb0_reason = r;
+#endif
+  }
+	if (max > v) {
+    max = v; changes |= EVENT_C | EVENT_U | EVENT_F;
+#ifdef LOGGING
+    ub0_reason = r;
+#endif
+  }
 #if INT_DOMAIN_LIST
 	if (vals)
 		vals_count = 1;

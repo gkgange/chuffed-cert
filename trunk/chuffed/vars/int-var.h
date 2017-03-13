@@ -54,6 +54,11 @@ public:
 	bool in_scip;
 	bool all_in_scip;
 
+#ifdef LOGGING
+  Reason lb0_reason;
+  Reason ub0_reason;
+#endif
+
 	Tchar *vals;
 #if INT_DOMAIN_LIST
 	Tint *vals_list;
