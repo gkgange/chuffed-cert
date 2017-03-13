@@ -9,7 +9,7 @@ def arg_parser():
   return parser
 
 def desparse(infile):
-  regex = re.compile(r"""var \{([0-9 ,]+)\}: ([a-zA-Z0-9_]+) *[:;]""")
+  regex = re.compile(r"""var \{([0-9 ,-]+)\}: ([a-zA-Z0-9_]+) *[:;]""")
   for line in infile.readlines():
     match = re.match(regex, line)
     if match:

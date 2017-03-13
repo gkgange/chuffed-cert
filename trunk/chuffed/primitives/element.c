@@ -99,9 +99,17 @@ void array_int_element(IntVar* _x, vec<int>& a, IntVar* _y, int offset) {
 
 // y = a[x-offset]
 
+#ifdef LOGGING
+// GKG: Should put this somewhere central
+void addClause(Lit x, Lit y, Lit z) {
+  vec<Lit> ps; ps.push(x); ps.push(y); ps.push(z);
+  sat.addClause(ps);
+}
+#endif
 void array_var_bool_element(IntVar* _x, vec<BoolView>& a, BoolView y, int offset) {
 	_x->specialiseToEL();
 	IntView<4> x(_x, 1, -offset);
+#ifndef LOGGING
 	vec<Lit> ps1(a.size()+1);
 	vec<Lit> ps2(a.size()+1);
 	// Add clause !y \/ c_1 \/ ... \/ c_n
@@ -125,6 +133,14 @@ void array_var_bool_element(IntVar* _x, vec<BoolView>& a, BoolView y, int offset
 	}
 	sat.addClause(ps1);
 	sat.addClause(ps2);
+#else
+  // Logging version can't introduce intermediate variables
+  // This is weak but, I think, correct
+  for(int ii = 0; ii < a.size(); ii++) {
+    addClause(x != ii, a[ii], ~y);
+    addClause(x != ii, ~a[ii], y);
+  }
+#endif
 }
 
 //-----

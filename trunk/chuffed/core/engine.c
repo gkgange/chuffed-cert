@@ -245,7 +245,7 @@ RESULT Engine::search() {
 			conflicts++; conflictC++;
 
 			if (time(NULL) > so.time_out) {
-				printf("Time limit exceeded!\n");
+				// printf("Time limit exceeded!\n");
 				return RES_UNK;
 			}
 

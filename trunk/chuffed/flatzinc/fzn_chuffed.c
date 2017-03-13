@@ -91,5 +91,9 @@ int main(int argc, char** argv) {
 #ifdef LOGGING
   logging::finalize();
 #endif
+#if 0
 	return 0;
+#else
+  return engine.status == RES_UNK;
+#endif
 }
